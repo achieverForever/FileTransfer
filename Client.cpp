@@ -14,14 +14,14 @@ using namespace std;
 #define FILE_BUFFER_SIZE  100*1000  //文件缓冲区为100KB,用于暂存DataPack.content
 #define CONTENT_SIZE DATA_PACK_SIZE-MAX_FILE_NAME-5*sizeof(int)  // DataPack结构体中的content的容量为79880 bytes.
 
-// Define a structure to hold the content of a file
+// 定义数据包结构
 typedef struct FilePack{
-	char fName[MAX_FILE_NAME];	// File's name
-	unsigned long fLen;	// File's length
-	unsigned long packNum;	// DataPack 编号
-	int packLen;	// DataPack's length
-	unsigned long packCount;	// 总共需多少个DataPack
-	int contenLen;	// DataPack中content实际存储的字节数
+	char fName[MAX_FILE_NAME];	// 文件名
+	unsigned long fLen;			// 文件长度
+	unsigned long packNum;		// 数据包编号
+	int packLen;				// 数据包长度
+	unsigned long packCount;	// 数据包总数
+	int contenLen;				// 数据包实际携带数据的字节数
 	char content[CONTENT_SIZE];	// 用于存放文件字节流
 }DataPack, *pDataPack;
 
@@ -92,12 +92,12 @@ int main(){
 	int bytesRecv=0, bytesLeft=0, bytesWrite=0, bRecv=0;
 	static unsigned long bytesRecvCount=0;	//统计已接收多少字节数据,用于与fileLen比较，检测文件是否完全被接收成功。
 
-	DataPack dataPackRecv;	// Used to store a DataPack structure
+	DataPack dataPackRecv;	
 
-	// Initialize Winsock
+	// 初始化winsock
 	WinsockInitial();
 
-	// Create a socket
+	// 创建一个Socket
 	SOCKET sockClient=socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if(sockClient==INVALID_SOCKET){
 		cout<<"Error at socket()."<<endl;
@@ -105,7 +105,7 @@ int main(){
 		return 1;
 	}
 
-	// Set the buffer size of socket
+	// 设置Socket缓冲区大小
 	char sockBuf[SOCKKET_BUFFER_SIZE];
 	int nBuf=SOCKKET_BUFFER_SIZE;
 	int nBufLen=sizeof(nBuf);
@@ -124,7 +124,7 @@ int main(){
 		return 1;
 	}
 
-	// Connect to the Server
+	// 与服务器建立连接
 	addrServ.sin_family=AF_INET;
 	addrServ.sin_port=htons(port);
 	addrServ.sin_addr.S_un.S_addr=inet_addr(servIP);
@@ -171,10 +171,10 @@ int main(){
 		return 1;
 	}
 
-	// Create a local file to write into
+	// 在本地创建远端文件的拷贝
 	FILE *fwp=NULL;
 
-	// Check if the file with the same file name already exist, if exists, ask client if he/her want to overload the existed one
+	// 检查是否存在同名文件
 	if(FileExists(fwp, dataPackRecv.fName)==0){
 		cout<<"Do you want to overload it ? (y for Yes and n for No)"<<endl;
 		cin>>select;
@@ -196,7 +196,6 @@ int main(){
 		return 1;
 	}
 
-	// Set the buffer size of File
 	char fileBuf[FILE_BUFFER_SIZE];
 
 	if(setvbuf(fwp, fileBuf, _IONBF, FILE_BUFFER_SIZE)!=0){
@@ -209,11 +208,7 @@ int main(){
 
 	//将第一个包中的content写入文件
 	memcpy(fileBuf, dataPackRecv.content, dataPackRecv.contenLen);
-
-	cout<<"fwrite()前，位置指针： "<<ftell(fwp)<<endl;
 	bytesWrite=fwrite(fileBuf, 1, dataPackRecv.contenLen, fwp);
-	cout<<"fwrite()后，位置指针： "<<ftell(fwp)<<endl;
-
 
 	if(bytesWrite<dataPackRecv.contenLen){
 		cout<<"Error at fwrite(). Failed to write the content of dataPackRecv to local file."<<endl;
@@ -227,22 +222,9 @@ int main(){
 	if(packCount>1){
 		for(i=1; i<packCount; i++){
 
-		// 接收剩余的数据包
 			memset(sockBuf, 0, sizeof(sockBuf));
 			memset(&dataPackRecv, 0, sizeof(dataPackRecv));
 			memset(fileBuf, 0, sizeof(fileBuf));
-/*	Old	
-			bRecv=recv(sockClient, sockBuf, sizeof(dataPackRecv), 0);
-			if(bRecv<sizeof(dataPackRecv)){
-				cout<<"Error at FIRST recv(). Failed to receive a complete DataPack structure."<<endl;
-				int _bRecv=0;
-				_bRecv=recv(sockClient, &sockBuf[bRecv], sizeof(dataPackRecv)-bRecv, 0);
-				if( _bRecv < (sizeof(dataPackRecv)-bRecv) ){
-					cout<<"Error at SECOND recv(). Failed to receive a complete DataPack structure. "<<endl;
-					return 1;
-				}
-
-			}	*/
 
 			//接收剩余的数据包	new
 			bytesLeft=sizeof(dataPackRecv);
@@ -261,20 +243,13 @@ int main(){
 		
 			memcpy(&dataPackRecv, sockBuf, sizeof(DataPack));
 
-		//	cout<<"正在接收第 "<<dataPackRecv.packNum<<" 号DataPack."<<endl;
-		//	cout<<"正在接受第 "<<dataPackRecv.packNum<<" 个DataPack."<<endl;
-		//	cout<<"应接受字节： "<<sizeof(dataPackRecv)<<" bytes."<<endl;
-		//	cout<<"已接受字节："<<bRecv<<" bytes."<<endl;
-
 			bytesRecvCount+=dataPackRecv.contenLen;
 
 
 			//写入文件
 			memcpy(fileBuf, dataPackRecv.content, dataPackRecv.contenLen);
 
-		//	cout<<"fwrite()前： "<<ftell(fwp)<<endl;
 			bytesWrite=fwrite(fileBuf, 1, dataPackRecv.contenLen, fwp);
-		//	cout<<"fwrite()后： "<<ftell(fwp)<<endl;
 			cout<<"正在接收 "<<dataPackRecv.packNum<<" 个DataPack.      bytesRecvCount: "<<bytesRecvCount<<endl;
 			if(bytesWrite<dataPackRecv.contenLen){
 				cout<<"Error at fwrite(). Failed to write the content of dataPackRecv to local file."<<endl;

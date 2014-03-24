@@ -93,22 +93,6 @@ int SockSend(DataPack &dataPack, SOCKET &sock, char *sockBuf){
 	return 0;
 }
 
-/*
-unsigned long GetFileLen(FILE *fp){
-	// 获取文件大小
-	if(fp==NULL){
-		cout<<"Invalid argument. Error at GetFileLen()."<<endl;
-		exit(0);
-	}
-	fseek(fp, 0, SEEK_END);
-	unsigned long tempFileLen=ftell(fp);
-	cout<<ftell(fp)<<endl;
-	fseek(fp, 0, SEEK_SET);
-	return tempFileLen;
-}
-*/
-
-//新版GetFileLen函数 
 unsigned long GetFileLen(char *fileName){
 	HANDLE hFile=CreateFile(fileName,GENERIC_READ,
 		FILE_SHARE_READ|FILE_SHARE_WRITE,NULL, 
@@ -233,7 +217,6 @@ int main(){
 
 	FILE *frp;	// Used to read
 
-	// Open the file in read+binary mode
 	frp=fopen(fileName, "rb");
 	if(frp==NULL){
 		cout<<"Error at fopen_s()."<<endl;
@@ -329,15 +312,8 @@ int main(){
 			
 			//发送DataPackSend
 			memcpy(sockBuf, (char*)&dataPackSend, sizeof(dataPackSend));
-/*OLD
-			bSend=send(sockConn, sockBuf, sizeof(dataPackSend), 0);
-			if(bSend < sizeof(dataPackSend) ){
-				cout<<"Error at send(). 发送第 "<<dataPackSend.packNum<<" 个DataPack时错误."<<endl;
-			}else{
-					cout<<"成功发送 "<<dataPackSend.packNum<<" 号 DataPack."<<endl;
-			}
-*/		
-			//发送数据包	new
+	
+			//发送数据包
 			bytesLeft=sizeof(dataPackSend);
 			int idx=0;
 			while(bytesLeft>0){
